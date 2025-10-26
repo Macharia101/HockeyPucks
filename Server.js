@@ -3,10 +3,14 @@
 // Import the Express library to create and manage the server
 const express = require('express');
 const bcrypt = require('bcrypt');
-const path = require('path');
+const jwt = require('jsonwebtoken');
 
 // Create an instance of an Express application
 const app = express();
+
+// --- Configuration ---
+// In a production app, this secret should be a long, complex string stored in an environment variable.
+const JWT_SECRET = 'your-super-secret-and-long-key-for-jwt';
 
 // Define the port the server will run on. Use the environment's port if available, otherwise default to 3000.
 const PORT = process.env.PORT || 3000;
@@ -15,16 +19,8 @@ const PORT = process.env.PORT || 3000;
 // This allows us to read the body of POST/PUT requests.
 app.use(express.json());
 
-// Serve static files (index.html, script.js, style.css, etc.) from the project root
-// so that visiting / returns index.html instead of "Cannot GET /".
-app.use(express.static(path.join(__dirname)));
-
-// Ensure the root route explicitly serves index.html (helpful if index fallback is needed)
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
-
 // Middleware to serve static files (HTML, CSS, JS) from the current directory
+// This allows the server to find and send index.html, style.css, script.js, etc.
 app.use(express.static('.'));
 
 // --- In-Memory Database ---
@@ -128,8 +124,15 @@ app.post('/api/users/login', async (req, res) => {
 
         // Check if user exists and if password is correct
         if (user && await bcrypt.compare(password, user.password)) {
-            // In a real app, you would generate a JWT (JSON Web Token) here
-            res.json({ message: 'Login successful!' });
+            // User is authenticated. Create a JWT.
+            const payload = {
+                userId: user.id,
+                email: user.email
+            };
+
+            // Sign the token with the secret key, and set it to expire in 1 hour.
+            const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' });
+            res.json({ message: 'Login successful!', token: token });
         } else {
             res.status(401).json({ message: 'Invalid email or password.' });
         }

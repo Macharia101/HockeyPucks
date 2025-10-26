@@ -1,0 +1,40 @@
+<!-- login.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - My Awesome Shop</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1><a href="/" class="home-link">My Awesome Shop</a></h1>
+            <div class="nav-links">
+                <a href="/register.html" class="cart-link">Register</a>
+                <a href="/login.html" class="cart-link">Login</a>
+                <a href="/cart.html" id="cart-indicator" class="cart-link">Cart (0)</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <h2>Login to Your Account</h2>
+        <form id="login-form" class="auth-form">
+            <div id="form-message" class="form-message"></div>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <button type="submit" class="add-to-cart-btn">Login</button>
+        </form>
+    </main>
+
+    <script src="login.js"></script>
+</body>
+</html>
