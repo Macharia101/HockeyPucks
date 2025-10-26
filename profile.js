@@ -38,4 +38,54 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     fetchProfile();
+
+    // --- Order History Logic ---
+    async function fetchOrderHistory() {
+        const orderHistoryContainer = document.getElementById('order-history-container');
+        try {
+            const response = await fetch('/api/orders', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) {
+                throw new Error('Could not fetch order history.');
+            }
+            const orders = await response.json();
+            displayOrderHistory(orders);
+        } catch (error) {
+            orderHistoryContainer.innerHTML = `<p class="form-message error" style="display: block;">${error.message}</p>`;
+        }
+    }
+
+    function displayOrderHistory(orders) {
+        const container = document.getElementById('order-history-container');
+        container.innerHTML = ''; // Clear loading message
+
+        if (orders.length === 0) {
+            container.innerHTML = '<p>You have not placed any orders yet.</p>';
+            return;
+        }
+
+        orders.forEach(order => {
+            const orderCard = document.createElement('div');
+            orderCard.className = 'order-card';
+
+            const productsHtml = order.products.map(p => `
+                <li class="order-product-item">
+                    <img src="${p.imageUrl}" alt="${p.name}" class="order-product-image">
+                    <span>${p.name} - $${p.price.toFixed(2)}</span>
+                </li>
+            `).join('');
+
+            orderCard.innerHTML = `
+                <div class="order-card-header">
+                    <h4>Order #${order.orderId} - ${new Date(order.orderDate).toLocaleDateString()}</h4>
+                    <strong>Total: $${order.total.toFixed(2)}</strong>
+                </div>
+                <ul class="order-product-list">${productsHtml}</ul>
+            `;
+            container.appendChild(orderCard);
+        });
+    }
+
+    fetchOrderHistory();
 });

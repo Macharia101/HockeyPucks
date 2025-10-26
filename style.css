@@ -197,6 +197,14 @@ h2 {
     box-sizing: border-box; /* Important for padding and width */
 }
 
+/* Style for the Stripe Card Element */
+.StripeElement {
+    border: 1px solid #ccc;
+    padding: 0.75rem;
+    border-radius: 5px;
+    background-color: white;
+}
+
 .form-message {
     margin-bottom: 1rem;
     padding: 1rem;
@@ -234,4 +242,68 @@ h2 {
     border: 0;
     border-top: 2px solid #eee;
     margin: 3rem 0;
+}
+
+/* --- Checkout Page Styles --- */
+.checkout-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    align-items: start;
+}
+
+.order-summary-box {
+    background-color: #f8f9fa;
+    padding: 2rem;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+.order-summary-box .total {
+    font-size: 1.2rem;
+    font-weight: bold;
+    text-align: right;
+}
+
+/* --- Order History Styles --- */
+.order-card {
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.order-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #ddd;
+    border-radius: 8px 8px 0 0;
+}
+
+.order-card-header h4 {
+    margin: 0;
+}
+
+.order-product-list {
+    list-style: none;
+    padding: 1rem 1.5rem;
+    margin: 0;
+}
+
+.order-product-item {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0;
+}
+
+.order-product-image {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 4px;
+    margin-right: 1rem;
 }

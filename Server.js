@@ -15,6 +15,10 @@ const app = express();
 // In a production app, this secret should be a long, complex string stored in an environment variable.
 const JWT_SECRET = 'your-super-secret-and-long-key-for-jwt';
 
+// Get your secret key from the Stripe dashboard.
+// In a real app, use an environment variable for this.
+const stripe = require('stripe')('sk_test_...'); // <-- ADD YOUR STRIPE SECRET KEY HERE
+
 // Define the port the server will run on. Use the environment's port if available, otherwise default to 3000.
 const PORT = process.env.PORT || 3000;
 
@@ -60,6 +64,9 @@ let currentId = 4;
 // In-memory store for users. In a real app, this would be a database table.
 let users = [];
 let currentUserId = 0;
+
+// In-memory store for orders.
+let orders = [];
 
 // --- Product API Routes ---
 // GET /api/products - Retrieve all products
@@ -293,6 +300,74 @@ app.delete('/api/admin/users/:id', [authenticateToken, adminOnly], (req, res) =>
         res.status(404).json({ message: 'User not found.' });
     }
 });
+
+// --- Order API Routes ---
+
+// GET /api/orders - Get order history for the logged-in user (Protected)
+app.get('/api/orders', authenticateToken, (req, res) => {
+    const userOrders = orders.filter(order => order.userId === req.user.userId);
+    res.json(userOrders.reverse()); // Return newest orders first
+});
+
+// POST /api/orders - Create a new order (Protected)
+app.post('/api/orders', authenticateToken, (req, res) => {
+    const { cart } = req.body;
+
+    if (!cart || !Array.isArray(cart) || cart.length === 0) {
+        return res.status(400).json({ message: 'Cart is empty or invalid.' });
+    }
+
+    // In a real app, you would verify product IDs and recalculate the total on the server
+    // to prevent price manipulation from the client.
+    const total = cart.reduce((sum, item) => sum + item.price, 0);
+
+    const newOrder = {
+        orderId: orders.length + 1,
+        userId: req.user.userId,
+        products: cart,
+        total: total,
+        orderDate: new Date()
+    };
+
+    orders.push(newOrder);
+    console.log('New Order:', newOrder); // For debugging
+
+    res.status(201).json({ message: 'Order created successfully', order: newOrder });
+});
+
+// --- Payment API Route ---
+
+// POST /api/create-payment-intent - Creates a payment intent for Stripe
+app.post('/api/create-payment-intent', authenticateToken, (req, res) => {
+    const { cart } = req.body;
+
+    // --- Server-side total calculation for security ---
+    // In a real app, you'd fetch product prices from your database.
+    let total = 0;
+    try {
+        total = cart.reduce((sum, cartItem) => {
+            const product = products.find(p => p.id === cartItem.id);
+            if (!product) throw new Error(`Product with ID ${cartItem.id} not found.`);
+            return sum + product.price;
+        }, 0);
+    } catch (error) {
+        return res.status(400).json({ message: error.message });
+    }
+
+    // Stripe requires the amount in the smallest currency unit (e.g., cents)
+    const amountInCents = Math.round(total * 100);
+
+    // Create a PaymentIntent with the order amount and currency
+    stripe.paymentIntents.create({
+        amount: amountInCents,
+        currency: 'usd',
+    }).then(paymentIntent => {
+        res.send({ clientSecret: paymentIntent.client_secret });
+    }).catch(e => {
+        res.status(500).json({ message: e.message });
+    });
+});
+
 
 // --- Start the Server ---
 app.listen(PORT, () => {

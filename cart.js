@@ -72,6 +72,19 @@ document.addEventListener('DOMContentLoaded', () => {
             <h3>Total: $<span id="cart-total">${total.toFixed(2)}</span></h3>
             <button id="checkout-btn" class="add-to-cart-btn">Proceed to Checkout</button>
         `;
+
+        // Add event listener for the checkout button
+        const checkoutBtn = document.getElementById('checkout-btn');
+        checkoutBtn.addEventListener('click', () => {
+            const token = localStorage.getItem('authToken');
+            if (token) {
+                window.location.href = '/checkout.html';
+            } else {
+                // Redirect to login, but also save the intended destination
+                alert('Please log in to proceed to checkout.');
+                window.location.href = '/login.html';
+            }
+        });
     }
 
     // Initial setup on page load

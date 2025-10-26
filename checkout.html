@@ -1,0 +1,53 @@
+<!-- checkout.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout - My Awesome Shop</title>
+    <script src="https://js.stripe.com/v3/"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1><a href="/" class="home-link">My Awesome Shop</a></h1>
+            <div class="nav-links">
+                <!-- Auth links will be dynamically inserted here by auth.js -->
+                <a href="/register.html" class="cart-link">Register</a>
+                <a href="/login.html" class="cart-link">Login</a>
+                <a href="/cart.html" id="cart-indicator" class="cart-link">Cart (0)</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <h2>Checkout</h2>
+        <div class="checkout-container">
+            <div id="order-summary" class="order-summary-box">
+                <h3>Order Summary</h3>
+                <div id="summary-items">
+                    <!-- Summary items will be inserted here -->
+                </div>
+                <hr>
+                <p class="total"><strong>Total: $<span id="summary-total">0.00</span></strong></p>
+            </div>
+            <div id="checkout-form-container" class="auth-form">
+                <div id="form-message" class="form-message"></div>
+                <form id="payment-form">
+                    <div class="form-group">
+                        <label for="card-element">Credit or debit card</label>
+                        <div id="card-element" class="StripeElement">
+                            <!-- A Stripe Element will be inserted here. -->
+                        </div>
+                    </div>
+                    <button id="place-order-btn" class="add-to-cart-btn">Pay Now</button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script src="auth.js"></script>
+    <script src="checkout.js"></script>
+</body>
+</html>
