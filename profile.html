@@ -1,0 +1,33 @@
+<!-- profile.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - My Awesome Shop</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1><a href="/" class="home-link">My Awesome Shop</a></h1>
+            <div class="nav-links">
+                <!-- Auth links will be dynamically inserted here by auth.js -->
+                <a href="/register.html" class="cart-link">Register</a>
+                <a href="/login.html" class="cart-link">Login</a>
+                <a href="/cart.html" id="cart-indicator" class="cart-link">Cart (0)</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <h2>My Profile</h2>
+        <div id="profile-content" class="auth-form">
+            <p>Loading profile...</p>
+        </div>
+    </main>
+
+    <script src="auth.js"></script>
+    <script src="profile.js"></script>
+</body>
+</html>

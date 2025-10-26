@@ -48,6 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const cartItem = document.createElement('div');
             cartItem.className = 'cart-item';
             cartItem.innerHTML = `
+                <img src="${item.imageUrl}" alt="${item.name}" class="cart-item-image">
                 <div class="cart-item-details">
                     <h3>${item.name}</h3>
                     <p class="price">$${item.price.toFixed(2)}</p>

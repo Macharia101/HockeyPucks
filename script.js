@@ -54,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
             productCard.className = 'product-card';
 
             productCard.innerHTML = `
+                <img src="${product.imageUrl}" alt="${product.name}" class="product-image">
                 <h3>${product.name}</h3>
                 <p class="price">$${product.price.toFixed(2)}</p>
                 <p>${product.description}</p>

@@ -4,6 +4,9 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 // Create an instance of an Express application
 const app = express();
@@ -19,23 +22,44 @@ const PORT = process.env.PORT || 3000;
 // This allows us to read the body of POST/PUT requests.
 app.use(express.json());
 
+// Create uploads directory if it doesn't exist
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir);
+}
+
 // Middleware to serve static files (HTML, CSS, JS) from the current directory
 // This allows the server to find and send index.html, style.css, script.js, etc.
 app.use(express.static('.'));
+// Serve uploaded images statically
+app.use('/uploads', express.static('uploads'));
+
+// --- Multer Configuration for File Uploads ---
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'uploads/');
+    },
+    filename: function (req, file, cb) {
+        // Create a unique filename to avoid overwrites
+        cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({ storage: storage });
 
 // --- In-Memory Database ---
 // For this example, we'll use a simple array to store our products.
 // In a real application, you would use a database like PostgreSQL, MongoDB, or MySQL.
 let products = [
-    { id: 1, name: 'Laptop Pro', price: 1200, description: 'A high-performance laptop for professionals.' },
-    { id: 2, name: 'Wireless Mouse', price: 25, description: 'Ergonomic wireless mouse with long battery life.' },
-    { id: 3, name: 'Mechanical Keyboard', price: 75, description: 'A tactile and responsive keyboard for typing and gaming.' }
+    { id: 1, name: 'Laptop Pro', price: 1200, description: 'A high-performance laptop for professionals.', imageUrl: '/uploads/placeholder.png' },
+    { id: 2, name: 'Wireless Mouse', price: 25, description: 'Ergonomic wireless mouse with long battery life.', imageUrl: '/uploads/placeholder.png' },
+    { id: 3, name: 'Mechanical Keyboard', price: 75, description: 'A tactile and responsive keyboard for typing and gaming.', imageUrl: '/uploads/placeholder.png' }
 ];
 let currentId = 4;
 
 // In-memory store for users. In a real app, this would be a database table.
 let users = [];
-let currentUserId = 1;
+let currentUserId = 0;
 
 // --- Product API Routes ---
 // GET /api/products - Retrieve all products
@@ -56,8 +80,8 @@ app.get('/api/products/:id', (req, res) => {
     }
 });
 
-// POST /api/products - Create a new product
-app.post('/api/products', (req, res) => {
+// POST /api/products - Create a new product (Admin Only, handles image upload)
+app.post('/api/products', [authenticateToken, adminOnly, upload.single('image')], (req, res) => {
     const { name, price, description } = req.body;
 
     // Basic validation
@@ -65,17 +89,74 @@ app.post('/api/products', (req, res) => {
         return res.status(400).json({ message: 'Product name and price are required.' });
     }
 
+    // Get the path to the uploaded image, or a default if none is provided
+    const imageUrl = req.file ? `/uploads/${req.file.filename}` : '/uploads/placeholder.png';
+
     const newProduct = {
         id: currentId++,
         name: name,
         price: parseFloat(price),
-        description: description || '' // Optional description
+        description: description || '', // Optional description
+        imageUrl: imageUrl
     };
 
     products.push(newProduct);
 
     // Return a 201 Created status and the new product object
     res.status(201).json(newProduct);
+});
+
+// PUT /api/products/:id - Update a product (Admin Only, handles image upload)
+app.put('/api/products/:id', [authenticateToken, adminOnly, upload.single('image')], (req, res) => {
+    const productId = parseInt(req.params.id, 10);
+    const productIndex = products.findIndex(p => p.id === productId);
+
+    if (productIndex > -1) {
+        const productToUpdate = products[productIndex];
+        const { name, price, description } = req.body;
+        const updatedProduct = { ...productToUpdate };
+
+        if (name) updatedProduct.name = name;
+        if (price) updatedProduct.price = parseFloat(price);
+        if (description !== undefined) updatedProduct.description = description;
+
+        // If a new image is uploaded, update the imageUrl and delete the old one
+        if (req.file) {
+            // Delete old image if it's not the placeholder
+            if (productToUpdate.imageUrl && productToUpdate.imageUrl !== '/uploads/placeholder.png') {
+                fs.unlink(path.join(__dirname, productToUpdate.imageUrl), err => {
+                    if (err) console.error("Error deleting old image:", err);
+                });
+            }
+            updatedProduct.imageUrl = `/uploads/${req.file.filename}`;
+        }
+
+        products[productIndex] = updatedProduct;
+        res.json(updatedProduct);
+    } else {
+        res.status(404).json({ message: 'Product not found.' });
+    }
+});
+
+// DELETE /api/products/:id - Delete a product (Admin Only)
+app.delete('/api/products/:id', [authenticateToken, adminOnly], (req, res) => {
+    const productId = parseInt(req.params.id, 10);
+    const productIndex = products.findIndex(p => p.id === productId);
+
+    if (productIndex > -1) {
+        const productToDelete = products[productIndex];
+        products.splice(productIndex, 1);
+
+        // Delete the associated image file, but not the placeholder
+        if (productToDelete.imageUrl && productToDelete.imageUrl !== '/uploads/placeholder.png') {
+            fs.unlink(path.join(__dirname, productToDelete.imageUrl), (err) => {
+                if (err) console.error("Error deleting product image:", err);
+            });
+        }
+        res.status(204).send();
+    } else {
+        res.status(404).json({ message: 'Product not found.' });
+    }
 });
 
 // --- User & Authentication API Routes ---
@@ -102,7 +183,9 @@ app.post('/api/users/register', async (req, res) => {
         const newUser = {
             id: currentUserId++,
             email: email,
-            password: hashedPassword
+            password: hashedPassword,
+            // For demonstration, the first user to register is an admin.
+            isAdmin: users.length === 0
         };
 
         users.push(newUser);
@@ -127,7 +210,8 @@ app.post('/api/users/login', async (req, res) => {
             // User is authenticated. Create a JWT.
             const payload = {
                 userId: user.id,
-                email: user.email
+                email: user.email,
+                isAdmin: user.isAdmin // Include admin status in the token
             };
 
             // Sign the token with the secret key, and set it to expire in 1 hour.
@@ -138,6 +222,75 @@ app.post('/api/users/login', async (req, res) => {
         }
     } catch (error) {
         res.status(500).json({ message: 'Server error during login.' });
+    }
+});
+
+// --- Authentication Middleware ---
+function authenticateToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Format: "Bearer TOKEN"
+
+    if (token == null) {
+        return res.status(401).json({ message: 'Authentication token required.' });
+    }
+
+    jwt.verify(token, JWT_SECRET, (err, userPayload) => {
+        if (err) {
+            return res.status(403).json({ message: 'Invalid or expired token.' });
+        }
+        // Add the user payload to the request object for use in other routes
+        req.user = userPayload;
+        next();
+    });
+}
+
+// --- Admin Middleware ---
+function adminOnly(req, res, next) {
+    if (req.user && req.user.isAdmin) {
+        next(); // User is an admin, proceed
+    } else {
+        res.status(403).json({ message: 'Forbidden: Admin access required.' });
+    }
+}
+
+// GET /api/users/me - Get the current logged-in user's profile
+// This is a protected route that uses our authentication middleware.
+app.get('/api/users/me', authenticateToken, (req, res) => {
+    // The user's info (from the JWT payload) is available on req.user
+    res.json({
+        id: req.user.userId,
+        email: req.user.email
+    });
+});
+
+// GET /api/admin/users - Get a list of all users (Admin Only)
+app.get('/api/admin/users', [authenticateToken, adminOnly], (req, res) => {
+    // Return a "sanitized" list of users (without passwords)
+    const sanitizedUsers = users.map(u => ({
+        id: u.id,
+        email: u.email,
+        isAdmin: u.isAdmin
+    }));
+    res.json(sanitizedUsers);
+});
+
+// DELETE /api/admin/users/:id - Delete a user (Admin Only)
+app.delete('/api/admin/users/:id', [authenticateToken, adminOnly], (req, res) => {
+    const userIdToDelete = parseInt(req.params.id, 10);
+
+    // Prevent an admin from deleting themselves
+    if (userIdToDelete === req.user.userId) {
+        return res.status(400).json({ message: 'Admins cannot delete their own account.' });
+    }
+
+    const userIndex = users.findIndex(u => u.id === userIdToDelete);
+
+    if (userIndex > -1) {
+        users.splice(userIndex, 1);
+        // Respond with 204 No Content, which is standard for a successful DELETE.
+        res.status(204).send();
+    } else {
+        res.status(404).json({ message: 'User not found.' });
     }
 });
 
